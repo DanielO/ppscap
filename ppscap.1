@@ -1,0 +1,89 @@
+.\"-
+.\"- Copyright 2022 Daniel O'Connor <darius@dons.net.au>
+.\"-
+.\"- Redistribution and use in source and binary forms, with or
+.\"without modification, are permitted provided that the following
+.\"conditions are met:
+.\"-
+.\"- 1. Redistributions of source code must retain the above copyright
+.\"notice, this list of conditions and the following disclaimer.
+.\"-
+.\"- 2. Redistributions in binary form must reproduce the above
+.\"copyright notice, this list of conditions and the following
+.\"disclaimer in the documentation and/or other materials provided
+.\"with the distribution.
+.\"-
+.\"- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+.\"CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+.\"INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+.\"MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+.\"DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+.\"BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+.\"OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+.\"PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+.\"PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+.\"OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\"(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+.\"USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+.\"DAMAGE.
+.Dd April 30, 2022
+.Dt PPSCAP 1
+.Os
+.Sh NAME
+.Nm ppscap
+.Nd capture PPS edges and parse NMEA to pass to NTPD
+.Sh SYNOPSIS
+.Nm
+.Op Fl acdv
+.Op Fl l Ar socketpath
+.Op Fl p Ar ppsdev
+.Op Fl r Ar baud
+.Op Fl s Ar shmunit
+.Ar device
+.Sh DESCRIPTION
+.Nm
+captures PPS edges from a device and reads NMEA messages from a serial
+port (which may not necessarily be the same) and optionally sends them to
+NTPD via shared memory segment. A unix domain socket can be nominated to
+listen on and clients connecting to it can send and receive GPS traffic.
+.Pp
+The options are as follows:
+.Bl -tag -width indent
+.It Fl a
+Capture PPS edge assertion.
+.It Fl c
+Capture PPS edge clear.
+.It Fl d
+Invert DTR control. Normally DTR is cleared on open and set to write to the
+serial port.
+.It Fl l Ar socketpath
+Bind to
+.Ar socketpath
+and listen for connections. Traffic from the serial port is echoed to each
+connection. Any writes are sent to the serial port.
+.It Fl r Ar baud
+Set serial port to
+.Ar baud
+rate. Default is 115200.
+.It Fl s Ar shmunit
+Connect to NTP shared memory segment unit number
+.Ar unit
+to pass timestamps. Defaults to no connection.
+.It Fl p Ar ppsdev
+Device to capture edges from. Defaults to capturing from the serial device.
+.It Fl v
+Increase verbosity, can be specified multiple times.
+.It Ar device
+Serial device to read NMEA sentences from.
+.El
+.Sh EXAMPLES
+Read NMEA sentences from a UART at 9600 baud and capture PPS edge assertions
+from an input capture timer and feed them to the NTP shared memory segment
+unit 3.
+.Pp
+.Dl $ ppscap -a -p /dev/dmtpps -r 9600 -s 3 /dev/cuau2
+.Sh SEE ALSO
+.Xr telnet 1 ,
+.Xr ntpd 8
+.Sh STANDARDS
+RFC 2783 - Pulse-Per-Second API for UNIX-like Operating Systems
