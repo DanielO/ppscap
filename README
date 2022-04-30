@@ -1,0 +1,4 @@
+ppscap captures PPS edges from a device and reads NMEA messages from a serial
+port (which may not necessarily be the same) and optionally sends them to
+NTPD via shared memory segment. A unix domain socket can be nominated to
+listen on and clients connecting to it can send and receive GPS traffic.
