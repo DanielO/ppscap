@@ -35,16 +35,16 @@
 /*
 ** PPSCAP.C
 **
-** Capture GPS time (from GGA messages) and PPS edges from a serial
-** port to feed ntpd.
+** Capture GPS time (from GGA or RMC messages) and PPS edges from a
+** serial port to feed ntpd.
 ** Based on /usr/src/tools/test/ppsapi/ppsapitest.c
 **
 ** The PPS API is described at:
 ** https://datatracker.ietf.org/doc/html/rfc2783
 **
+** Note that it is recommended to use RMC as GGA only has time of day
+** so the PC clock is used to get the day.
 */
-
-static const char __attribute__((used)) ppscap_id[] = "@(#)$Id$";
 
 #include <sys/ipc.h>
 #include <sys/queue.h>
@@ -458,10 +458,10 @@ Example:\n\
     /* Attach to NTP SHM segment */
     if (shmunit >= 0) {
 	if ((shmid = shmget(0x4e545030 + shmunit, sizeof(struct shmTime), 0)) == -1)
-	    errx(1, "shmget");
+	    err(1, "shmget of NTP unit %d failed", shmunit);
 	else
 	    if ((intptr_t)(shmntp = (struct shmTime *)shmat(shmid, 0, 0)) == -1)
-		errx(1, "shmat");
+		err(1, "shmat of NTP unit %d failed", shmunit);
     }
     /* Setup PPS API */
     if (time_pps_create(ppsfd, &ph) == -1)
