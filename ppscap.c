@@ -50,6 +50,8 @@
 #include <sys/queue.h>
 #include <sys/shm.h>
 #include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/timepps.h>
 #include <sys/un.h>
 #include <ctype.h>
 #include <err.h>
@@ -64,7 +66,6 @@
 #include <time.h>
 #include <termios.h>
 #include <unistd.h>
-#include <sys/timepps.h>
 
 static int aflag, cflag, vflag;
 static struct shmTime *shmntp = NULL;
@@ -321,7 +322,8 @@ setfdnonblock(int fd) {
 
 int
 main(int argc, char** argv) {
-    int ppsfd, datafd, servfd, i, mode, baud, amt, shmid, shmunit, dtr_pos, dtr_neg;
+    int ppsfd, datafd, servfd, i, mode, baud, amt, shmid, shmunit,
+	dtr_pos, dtr_neg, force_dtr;
     pps_info_t pi;
     pps_params_t pp;
     pps_handle_t ph;
@@ -351,7 +353,9 @@ main(int argc, char** argv) {
     dtr_pos = TIOCCDTR;
     dtr_neg = TIOCSDTR;
     ppsfd = -1;
-    while ((i = getopt(argc, argv, "aAcdl:p:r:s:v")) != -1) {
+    force_dtr = 0;
+
+    while ((i = getopt(argc, argv, "aAcdDl:p:r:s:v")) != -1) {
 	switch (i) {
 	case 'a':
 	    aflag = 1;
@@ -362,6 +366,9 @@ main(int argc, char** argv) {
 	case'd':
 	    dtr_pos = TIOCSDTR;
 	    dtr_neg = TIOCCDTR;
+	    break;
+	case 'D':
+	    force_dtr = 1;
 	    break;
 	case 'l':
 	    socketpath = optarg;
@@ -383,11 +390,12 @@ main(int argc, char** argv) {
 	case '?':
 	default:
 	    fprintf(stderr, "\
-Usage: %s [-acdv] [-l socketpath] [-r baud] [-s shmunit] [-p ppsdev] device\n\
+Usage: %s [-acdDv] [-l socketpath] [-r baud] [-s shmunit] [-p ppsdev] device\n\
 \n\
 	-a		Capture PPS on edge assert\n\
 	-c		Capture PPS on edge clear\n\
 	-d		Invert DTR control (normally cleared, raised to write to serial port)\n\
+	-D		Force DTR to always be set for writing (raised or cleared as per -d)\n\
 	-v		Increase verbosity (can be specified multiple times)\n\
 	socketpath	Path to unix domain socket to listen on\n\
 	baud		Baud rate to talk to device (default: 115200)\n\
@@ -452,8 +460,13 @@ Example:\n\
 	err(1, "tcsetattr");
 
     /* Set DTR as the user requested */
-    if (ioctl(datafd, dtr_pos, 0) == -1)
-	err(1, "ioctl TIO[CS]DTR");
+    if (force_dtr) {
+	if (ioctl(datafd, dtr_neg, 0) == -1)
+	    err(1, "ioctl TIO[CS]DTR");
+    } else {
+	if (ioctl(datafd, dtr_pos, 0) == -1)
+	    err(1, "ioctl TIO[CS]DTR");
+    }
 
     /* Attach to NTP SHM segment */
     if (shmunit >= 0) {
@@ -622,9 +635,10 @@ Example:\n\
 		/* Check if it's expired */
 		gettimeofday(&tmpts, NULL);
 		if (timercmp(&tmpts, &writedone, >)) {
-		    /* Reset DTR */
-		    if (ioctl(datafd, dtr_pos, 0))
-			err(1, "ioctl TIOC[CS]DTR");
+		    /* Reset DTR if required */
+		    if (force_dtr)
+			if (ioctl(datafd, dtr_pos, 0))
+			    err(1, "ioctl TIOC[CS]DTR");
 		    writedone.tv_sec = 0;
 		    writedone.tv_usec = 0;
 		}
