@@ -71,7 +71,7 @@ static int aflag, cflag, vflag;
 static struct shmTime *shmntp = NULL;
 
 /* NTP SHM structure
- * https://www.eecis.udel.edu/~mills/ntp/html/drivers/driver28.html
+ * https://doc.ntp.org/documentation/drivers/driver28
  */
 struct shmTime {
     int    mode;
@@ -275,12 +275,19 @@ parsebuf(char *buf) {
 	int utchr, utcmin, utcsec, utchsec, utcday, utcmon, utcyr;
 	char status;
 
-	/* $GNRMC,073418.00,A,3500.22805,S,13833.89082,E,0.007,,290422,,,A*78 */
+	/* $GNRMC,073418.00,A,3500.22805,S,13833.89082,E,0.007,,290422,,,A*78
+	 * $GNRMC,042635.00,A,3454.49120,S,13835.76170,E,0.0,0.0,150722,,,D*5E - NMEAv4.10+
+	 */
 	if ((res = sscanf(msgbuf, "%2d%2d%2d.%d,%c,%*f,%*c,%*f,%*c,%*[^,],,%2d%2d%2d,%*s",
-	      &utchr, &utcmin, &utcsec, &utchsec, &status, &utcday, &utcmon, &utcyr)) != 8) {
-	    if (vflag > 2)
-		printf("Unable to parse RMC (%d) - %s\n", res, msgbuf);
-	    return -1;
+			  &utchr, &utcmin, &utcsec, &utchsec, &status, &utcday, &utcmon,
+			  &utcyr)) != 8) {
+	    if ((res = sscanf(msgbuf, "%2d%2d%2d.%d,%c,%*f,%*c,%*f,%*c,%*[^,],%*[^,],%2d%2d%2d,%*s",
+			      &utchr, &utcmin, &utcsec, &utchsec, &status, &utcday, &utcmon,
+			      &utcyr)) != 8) {
+		if (vflag > 2)
+		    printf("Unable to parse RMC (%d) - %s\n", res, msgbuf);
+		return -1;
+	    }
 	}
 
 	if (status != 'A') {
